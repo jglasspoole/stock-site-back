@@ -72,8 +72,14 @@ def thread_method_scraping():
 		if len(errData) > 0:
 			errorData += errData + "\n"
 			
-		# Wait for a period of time until next loop iteration (25 to 35 seconds)
-		secsToWait = 25 + random.randint(0,10)
+		# Wait for a period of time until next loop iteration 
+
+		# PRODUCTION
+		secsToWait = 220 + random.randint(1,62)
+
+		# TESTING 
+		# secsToWait = 20 + random.randint(5, 15)
+
 		secsWaited = 0
 		while secsWaited < secsToWait and getattr(currThread, "do_run", True):
 			time.sleep(1)
@@ -91,7 +97,10 @@ def run_tmx_tsx_scrape():
 	currDT = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 	todayFileSubstring = volMoversFileStub + '-' + currDate 
 
+	# Log file for scrape times
 	print("TMX TSX Volume scrape " + currDT)
+	with open("tmx_scrape_test.txt", 'a') as tmxScrapeTestFile:
+		tmxScrapeTestFile.write("TSX VolMover Scrape : " + currDT + "\n")
 	
 	# First check if there is a cache version of this scrape on record
 	dataDirFiles = [f for f in listdir(scrapeDataDir) if isfile(join(scrapeDataDir, f))]
@@ -137,14 +146,12 @@ def run_tmx_tsx_scrape():
 	# Convert string to JSON
 	requestDataJson = json.loads(dataFileString)
 	
-	# Get the parsed stock data structure
-	symbolData = populate_volume_mover_symbol_data(requestDataJson)
-								
-	# Log file for scrape times
-	with open("tmx_scrape_test.txt", 'a') as tmxScrapeTestFile:
-		tmxScrapeTestFile.write("TSX VolMover Scrape : " + currDT + "\n")
+	# Get the parsed stock information structure and featured stock structure
+	symbolData, featuredData = populate_volume_mover_symbol_data(requestDataJson, 1)
 	
-	# Write each queried symbol to the database
+	# Write each stock information structure to the database
+	dbData = ""
+	errData = ""
 	for symbolDataItem in symbolData:
 		dbData, errData = db.update_ticker_data(symbolDataItem)
 	
@@ -153,7 +160,20 @@ def run_tmx_tsx_scrape():
 	
 	if len(errData) > 0:
 		errorData += errData + "\n"
+
+	# Write each featured stock structure to the database
+	dbData = ""
+	errData = ""
+	for featuredDataItem in featuredData:
+		dbData, errData = db.update_featured_stock_data(featuredDataItem)
+	
+	if len(dbData) > 0:
+		returnData += dbData + "\n"
+	
+	if len(errData) > 0:
+		errorData += errData + "\n"
 		
+	# Log and errors encountered
 	if len(errorData) > 0:
 		with open("thread_error_log.txt", 'a') as threadErrorFile:
 			threadErrorFile.write("TMX TSX VolMover Thread Done: " + currDT + "\n")
@@ -171,8 +191,11 @@ def run_tmx_tsxv_scrape():
 	currDT = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 	todayFileSubstring = volMoversFileStub + '-' + currDate 
 
+	# Log file for scrape times
 	print("TMX TSXV Volume scrape " + currDT)
-	
+	with open("tmx_scrape_test.txt", 'a') as tmxScrapeTestFile:
+		tmxScrapeTestFile.write("TSXV VolMover Scrape : " + currDT + "\n")
+
 	# First check if there is a cache version of this scrape on record
 	dataDirFiles = [f for f in listdir(scrapeDataDir) if isfile(join(scrapeDataDir, f))]
 	
@@ -218,15 +241,25 @@ def run_tmx_tsxv_scrape():
 	requestDataJson = json.loads(dataFileString)
 	
 	# Get the parsed stock data structure
-	symbolData = populate_volume_mover_symbol_data(requestDataJson)
+	symbolData, featuredData = populate_volume_mover_symbol_data(requestDataJson, 2)
 		
-	# Log file for scrape times
-	with open("tmx_scrape_test.txt", 'a') as tmxScrapeTestFile:
-		tmxScrapeTestFile.write("TSXV VolMover Scrape : " + currDT + "\n")
-
 	# Write each queried symbol to the database
+	dbData = ""
+	errData = ""
 	for symbolDataItem in symbolData:
 		dbData, errData = db.update_ticker_data(symbolDataItem)
+	
+	if len(dbData) > 0:
+		returnData += dbData + "\n"
+	
+	if len(errData) > 0:
+		errorData += errData + "\n"
+
+	# Write each featured stock structure to the database
+	dbData = ""
+	errData = ""
+	for featuredDataItem in featuredData:
+		dbData, errData = db.update_featured_stock_data(featuredDataItem)
 	
 	if len(dbData) > 0:
 		returnData += dbData + "\n"
@@ -241,13 +274,16 @@ def run_tmx_tsxv_scrape():
 	
 	return returnData, errorData
 	
-def populate_volume_mover_symbol_data(requestDataJson):
+def populate_volume_mover_symbol_data(requestDataJson, featureType):
 	# Build the list of individual stock dictionaries
 	symbolData = []
-	
+	featureData = []
+	orderValue = 1
+
 	# Parse the quote data into our struct
 	for quoteItem in requestDataJson['quote']: # get each stock
 		symbolDict = {}
+		featureDict = {}
 		for quoteKey, quoteItemDict in quoteItem.items(): 
 			if quoteKey == "key":	
 				for keyDictKey, keyDictVal in quoteItemDict.items(): #get inside "key"
@@ -275,7 +311,7 @@ def populate_volume_mover_symbol_data(requestDataJson):
 						symbolDict["fiftytwo_week_high"] = fundInfoVal
 					elif fundInfoKey == "week52low":
 						symbolDict["fiftytwo_week_low"] = fundInfoVal
-		# update the ticker format to match API
+		# Update the ticker format to match API
 		if symbolDict["ticker"][-3:] == ":CA":
 			symbolStringNoEx = (symbolDict["ticker"][:-3]).replace(".", "-")
 			# Add the appropriate exchange suffix based on the exchange queried
@@ -283,9 +319,17 @@ def populate_volume_mover_symbol_data(requestDataJson):
 				symbolDict["ticker"] =  symbolStringNoEx + ".TO"
 			elif symbolDict["exchange_name"] == "TSXV":
 				symbolDict["ticker"] =  symbolStringNoEx + ".V"
+		# Get rid of commas in the volume number
 		if "share_volume" in symbolDict.keys():
 			symbolDict["share_volume"] = symbolDict["share_volume"].replace(",", "")
-		
+		# Build featured data object for the ticker
+		featureDict["ticker_ref"] = symbolDict["ticker"]
+		featureDict["feature_type"] = featureType
+		featureDict["order_value"] = orderValue
+
 		symbolData.append(symbolDict)
+		featureData.append(featureDict)
+
+		orderValue += 1
 		
-	return symbolData
+	return symbolData, featureData

@@ -159,6 +159,71 @@ def update_ticker_data(stockDataDict, tradeHistory = ""):
 			conn.close()
 	
 	return printString, errorString
+
+def update_featured_stock_data(featuredStockDataDict):
+	printString = ''
+	errorString = ''
+	conn = None
+	
+	if not "ticker_ref" in featuredStockDataDict.keys():
+		errorString += "Please provide the featured ticker field to be updated."
+	if len(featuredStockDataDict["ticker_ref"]) == 0:
+		errorString += "Please provide a featured ticker to update."
+	
+	if len(errorString) > 0:
+		return "", errorString
+
+	try:
+		conn, err = get_db_connection()
+		
+		if not err:
+			# create a cursor
+			cur = conn.cursor()
+			
+			# Data Sample:
+			# featuredStockDataDict = {"ticker_ref" : "", "feature_type" : "", "order_value" : ""}
+			
+			# Get the existing row for this featured stock if it exists
+			
+			sqlString = "SELECT id, ticker_ref, feature_type, order_value, last_updated FROM featured_stocks "
+			sqlString += "WHERE feature_type = '" + str(featuredStockDataDict["feature_type"]) + "' AND "
+			sqlString += "order_value = '" + str(featuredStockDataDict["order_value"]) + "';"
+			cur.execute(sqlString)
+			fetchedTickerRow = cur.fetchone()
+			
+			if fetchedTickerRow is None:
+				# Build the SQL insert statement
+				sqlString = "INSERT INTO featured_stocks (ticker_ref, feature_type, order_value, last_updated) "
+				sqlString += "VALUES (E'" + featuredStockDataDict["ticker_ref"] + "'"
+				sqlString += ", '" + str(featuredStockDataDict["feature_type"]) + "'"
+				sqlString += ", '" + str(featuredStockDataDict["order_value"]) + "'"
+				sqlString += ", CURRENT_TIMESTAMP)"
+			else:
+				# Build the SQL update statement
+				sqlString = "UPDATE featured_stocks SET "
+				sqlString += "ticker_ref = E'" + featuredStockDataDict["ticker_ref"] + "' "
+				sqlString += "WHERE feature_type = '" + str(featuredStockDataDict["feature_type"]) + "' AND "
+				sqlString += "order_value = '" + str(featuredStockDataDict["order_value"]) + "'"
+		
+			sqlString += ";"
+			
+			cur.execute(sqlString)
+	
+			# commit the changes
+			conn.commit()
+			
+			# close the communication
+			cur.close()
+		else:
+			errorString += err
+		
+	except (Exception, psycopg2.DatabaseError) as error:
+		errorString += str(error)
+	finally:
+		if conn is not None:
+			conn.close()
+	
+	return printString, errorString
 	
 def get_alphavantage_date_stats():
 	fetchedApiObj = None

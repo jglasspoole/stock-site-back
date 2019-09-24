@@ -25,6 +25,14 @@ CREATE TABLE stock_statistics (
 	date_data TIMESTAMP
 );
 
+CREATE TABLE featured_stocks (
+	id SERIAL PRIMARY KEY,
+	ticker_ref VARCHAR(16) REFERENCES stock_information(ticker) ON DELETE CASCADE NOT NULL,
+	feature_type INTEGER NOT NULL,
+	order_value SMALLINT NOT NULL,
+	last_updated TIMESTAMP NOT NULL
+);
+
 CREATE TABLE alphavantage_api_log (
 	id SERIAL PRIMARY KEY,
 	log_date DATE NOT NULL,
