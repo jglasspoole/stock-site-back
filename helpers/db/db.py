@@ -21,7 +21,7 @@ def get_db_connection():
 	
 	return conn, errorString
 	
-def update_ticker_data(stockDataDict, tradeHistory = ""):
+def update_ticker_data(stockDataDict, tradeHistory = "", priceUpdateDT = ""):
 	printString = ''
 	errorString = ''
 	conn = None
@@ -52,6 +52,8 @@ def update_ticker_data(stockDataDict, tradeHistory = ""):
 			fetchedTickerRow = cur.fetchone()
 			fieldsUpdated = 0
 			
+			# TODO: handle if a price update time is passed in and its earlier than the last price_updated, dont update price info
+
 			if fetchedTickerRow is None:
 				fieldsUpdated = 1
 				# Build the SQL insert statement
@@ -88,7 +90,10 @@ def update_ticker_data(stockDataDict, tradeHistory = ""):
 				if "share_volume" in stockDataDict.keys() and len(stockDataDict["share_volume"]) > 0:
 					sqlString += ", '" + stockDataDict["share_volume"] + "'"
 				if "last_price" in stockDataDict.keys() and len(stockDataDict["last_price"]) > 0:
-					sqlString += ", CURRENT_TIMESTAMP"
+					if len(priceUpdateDT) > 0: # If a price update time has been provided (accounting for delay)
+						sqlString += ", TIMESTAMP '" + priceUpdateDT + "'"
+					else:
+						sqlString += ", CURRENT_TIMESTAMP"
 				if len(tradeHistory) > 0 :
 					sqlString += ", E'" + tradeHistory + "', CURRENT_TIMESTAMP"
 				sqlString += ", CURRENT_TIMESTAMP)"
@@ -129,7 +134,10 @@ def update_ticker_data(stockDataDict, tradeHistory = ""):
 				if "last_price" in stockDataDict.keys() and len(stockDataDict["last_price"]) > 0:
 					if fieldsUpdated > 0:
 						sqlString += ", "
-					sqlString += "price_updated = CURRENT_TIMESTAMP"
+					if len(priceUpdateDT) > 0: # If a price update time has been provided (accounting for delay)
+						sqlString += "TIMESTAMP '" + priceUpdateDT + "'"
+					else:
+						sqlString += "price_updated = CURRENT_TIMESTAMP"
 					fieldsUpdated += 1
 				if len(tradeHistory) > 0 :
 					if fieldsUpdated > 0:

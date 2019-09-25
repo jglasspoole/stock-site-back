@@ -8,6 +8,7 @@ alpha_config.ini
 alpha_api_overuse_log.txt
 scrape_log.txt
 tmx_scrape_test.txt
+tv_scrape_test.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -113,3 +114,4 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
