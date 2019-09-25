@@ -150,11 +150,12 @@ def getTickerDailyData(tickerSymbol):
 			exchangeName = "TSXV"
 			
 		stockDataDict = {"ticker" : tickerSymbol, "exchange_name" : exchangeName, "company_name" : "", "last_price" : "", "change_amount" : "", "change_percent" : "", "fiftytwo_week_high" : "", "fiftytwo_week_low" : ""}
-		
+
 		currentPrice = ""
 		lastClose = ""
 		for dateDict in requestDataJson['Time Series (Daily)'].items():
-			for itemKey, itemVal in dateDict.items():
+			#for itemKey, itemVal in dateDict.items(): <-- this used to work...
+			for itemKey, itemVal in dateDict[1].items():
 				if itemKey == "4. close" and len(currentPrice) == 0:
 					currentPrice = itemVal
 					break
