@@ -135,7 +135,7 @@ def update_ticker_data(stockDataDict, tradeHistory = "", priceUpdateDT = ""):
 					if fieldsUpdated > 0:
 						sqlString += ", "
 					if len(priceUpdateDT) > 0: # If a price update time has been provided (accounting for delay)
-						sqlString += "TIMESTAMP '" + priceUpdateDT + "'"
+						sqlString += "price_updated = TIMESTAMP '" + priceUpdateDT + "'"
 					else:
 						sqlString += "price_updated = CURRENT_TIMESTAMP"
 					fieldsUpdated += 1
