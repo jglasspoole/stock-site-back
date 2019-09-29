@@ -168,6 +168,67 @@ def update_ticker_data(stockDataDict, tradeHistory = "", priceUpdateDT = ""):
 	
 	return printString, errorString
 
+def get_featured_stock_data(featureType):
+	featuredStockData = None
+	errorString = ''
+
+	# Validate the featureType field
+	if not (featureType == 1 or featureType == 2):
+		errorString += "Please provide a valid featureType field."
+	
+	if len(errorString) > 0:
+		return None, errorString
+
+	try:
+		conn, err = get_db_connection()
+		
+		if not err:
+			# create a cursor
+			cur = conn.cursor()
+
+			sqlString = "SELECT si.ticker, si.exchange_name, si.company_name, si.last_price, si.change_amount, "
+			sqlString += "si.change_percent, si.share_volume, si.price_updated, fs.order_value "
+			sqlString += "FROM stock_information si "
+			sqlString += "JOIN featured_stocks fs "
+			sqlString += "ON si.ticker = fs.ticker_ref "
+			sqlString += "WHERE fs.feature_type = " + str(featureType) + " "
+			sqlString += "ORDER BY fs.order_value ASC;"
+
+			cur.execute(sqlString)
+			allFeaturedStocks = cur.fetchall()
+
+			# Build the featured stock object array
+			
+			featuredStockData = { "featured_data" : None }
+			stockDataInfoArray = []
+			for featuredStock in allFeaturedStocks:
+				featuredStockDict = {}
+				featuredStockDict["ticker"] = featuredStock[0]
+				featuredStockDict["exchange_name"] = featuredStock[1]
+				featuredStockDict["company_name"] = featuredStock[2]
+				featuredStockDict["last_price"] = str(featuredStock[3])
+				featuredStockDict["change_amount"] = str(featuredStock[4])
+				featuredStockDict["change_percent"] = str(featuredStock[5])
+				featuredStockDict["share_volume"] = str(featuredStock[6])
+				featuredStockDict["price_updated"] = featuredStock[7]
+				featuredStockDict["order_value"] = str(featuredStock[8])
+				stockDataInfoArray.append(featuredStockDict)
+
+			featuredStockData["featured_data"] = stockDataInfoArray
+
+			# close the communication
+			cur.close()
+		else:
+			errorString += err
+		
+	except (Exception, psycopg2.DatabaseError) as error:
+		errorString += str(error)
+	finally:
+		if conn is not None:
+			conn.close()
+	
+	return featuredStockData, errorString
+
 def update_featured_stock_data(featuredStockDataDict):
 	printString = ''
 	errorString = ''
@@ -316,7 +377,6 @@ def update_alphavantage_date_stats(apiUpdateRow):
 	
 	return printData, errorString
 
-	
 def user_list():
 	printString = ''
 	errorString = ''

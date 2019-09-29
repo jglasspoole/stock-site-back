@@ -3,9 +3,7 @@ import importlib
 
 # import the quote helper
 quote = importlib.import_module("helpers.quote")
-
-# import the scrape helper
-scrape = importlib.import_module("helpers.scrape")
+db = importlib.import_module("helpers.db.db")
 	
 def get_quote(tickerParam):
 	printString = ''
@@ -52,11 +50,26 @@ def get_quote(tickerParam):
 			printString += str(requestData)
 	
 	return printString, errorString
-	
-def get_scrape():
-	printString = ''
+
+def get_volume_movers(exchangeParam):
+	printObject = None
 	errorString = ''
+
+	# Always dealing with full uppercase letters for comparison
+	exchangeParam = exchangeParam.upper()
 	
-	printString, errorString = scrape.scrape_tradingview()
-		
-	return printString, errorString
+	# Validate the exchange input and get appropriate feature type
+	featureType = -1
+	if len(exchangeParam) is 0:
+		errorString = "Please enter an exchange parameter."
+	elif exchangeParam == "TSX":
+		featureType = 1
+	elif exchangeParam == "TSXV":
+		featureType = 2
+	else:
+		errorString = "Please provide a valid exchange parameter."
+	
+	if not errorString:
+		printObject, errorString = db.get_featured_stock_data(featureType)
+	
+	return printObject, errorString
