@@ -17,10 +17,8 @@ tmxScrapeUrlTSXV = 'https://web.tmxmoney.com/json/embed.json.php?type=mm&exgroup
 # Scrape data dir
 scrapeDataDir = 'scrapes/'
 
-# Turn this to True if you want to cache the movers daily (not good for updating during trading day)
-cacheTmxMovers = False 
-
-def run_tmx_tsx_scrape():
+# cacheTmxMovers: set this to True if you want to cache the movers daily (not good for updating during trading day)
+def run_tmx_tsx_scrape(cacheTmxMovers = False):
 	returnData = ""
 	errorData = ""
 
@@ -31,9 +29,19 @@ def run_tmx_tsx_scrape():
 	todayFileSubstring = volMoversFileStub + '-' + currDate 
 
 	# Log file for scrape times
-	print("TMX TSX Volume scrape " + currDT)
+	if cacheTmxMovers is True:
+		print("TMX TSX Volume scrape CACHE: " + currDT)
+	else:
+		print("TMX TSX Volume scrape WEBREQ: " + currDT)
+
 	with open("tmx_scrape_test.txt", 'a') as tmxScrapeTestFile:
-		tmxScrapeTestFile.write("TSX VolMover Scrape : " + currDT + "\n")
+		logFileText = "TSX VolMover Scrape "
+		if cacheTmxMovers is True:
+			logFileText += "From Cache : "
+		else:
+			logFileText += "From WebReq : "
+		logFileText += currDT + "\n"
+		tmxScrapeTestFile.write(logFileText)
 	
 	# First check if there is a cache version of this scrape on record
 	dataDirFiles = [f for f in listdir(scrapeDataDir) if isfile(join(scrapeDataDir, f))]
@@ -62,13 +70,11 @@ def run_tmx_tsx_scrape():
 		response = requests.get(tmxScrapeUrlTSX)
 		dataFileString = response.text
 		
-		if cacheTmxMovers is True:
-			saveFileName = scrapeDataDir + volMoversFileStub + '-' + currDT + '.txt'
-			
-			# Write data to file
-			saveFile = open(saveFileName, "w")
-			saveFile.write("%s" % dataFileString)
-			saveFile.close()
+		# Write data to file
+		saveFileName = scrapeDataDir + volMoversFileStub + '-' + currDT + '.txt'
+		saveFile = open(saveFileName, "w")
+		saveFile.write("%s" % dataFileString)
+		saveFile.close()
 			
 	# Delete the old scrape files once we have achieved fresh data
 	if cacheTmxMovers is True and len(oldDataFileList) > 0:
@@ -114,7 +120,8 @@ def run_tmx_tsx_scrape():
 	
 	return returnData, errorData
 
-def run_tmx_tsxv_scrape():
+# cacheTmxMovers: set this to True if you want to cache the movers daily (not good for updating during trading day)
+def run_tmx_tsxv_scrape(cacheTmxMovers = False):
 	returnData = ""
 	errorData = ""
 
@@ -125,9 +132,19 @@ def run_tmx_tsxv_scrape():
 	todayFileSubstring = volMoversFileStub + '-' + currDate 
 
 	# Log file for scrape times
-	print("TMX TSXV Volume scrape " + currDT)
+	if cacheTmxMovers is True:
+		print("TMX TSXV Volume scrape CACHE: " + currDT)
+	else:
+		print("TMX TSXV Volume scrape WEBREQ: " + currDT)
+
 	with open("tmx_scrape_test.txt", 'a') as tmxScrapeTestFile:
-		tmxScrapeTestFile.write("TSXV VolMover Scrape : " + currDT + "\n")
+		logFileText = "TSXV VolMover Scrape "
+		if cacheTmxMovers is True:
+			logFileText += "From Cache : "
+		else:
+			logFileText += "From WebReq : "
+		logFileText += currDT + "\n"
+		tmxScrapeTestFile.write(logFileText)
 
 	# First check if there is a cache version of this scrape on record
 	dataDirFiles = [f for f in listdir(scrapeDataDir) if isfile(join(scrapeDataDir, f))]
@@ -156,13 +173,11 @@ def run_tmx_tsxv_scrape():
 		response = requests.get(tmxScrapeUrlTSXV)
 		dataFileString = response.text
 		
-		if cacheTmxMovers is True:
-			saveFileName = scrapeDataDir + volMoversFileStub + '-' + currDT + '.txt'
-			
-			# Write data to file
-			saveFile = open(saveFileName, "w")
-			saveFile.write("%s" % dataFileString)
-			saveFile.close()
+		# Write data to file
+		saveFileName = scrapeDataDir + volMoversFileStub + '-' + currDT + '.txt'
+		saveFile = open(saveFileName, "w")
+		saveFile.write("%s" % dataFileString)
+		saveFile.close()
 	
 	# Delete the old scrape files once we have achieved fresh data
 	if cacheTmxMovers is True and len(oldDataFileList) > 0:

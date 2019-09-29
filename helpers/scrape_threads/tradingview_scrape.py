@@ -20,10 +20,8 @@ tvScrapeUrl = 'https://www.tradingview.com/markets/stocks-canada/highs-and-lows-
 # Scrape data dir
 scrapeDataDir = 'scrapes/'
 
-# Turn this to True if you want to cache the data daily (not good for updating during trading day)
-cacheTvMovers = False 
-
-def run_tv_52wh_scrape():
+# cacheTvMovers: Turn this to True if you want to cache the data daily (not good for updating during trading day)
+def run_tv_52wh_scrape(cacheTvMovers = False):
   returnData = ''
   errorData = ''
 
@@ -38,9 +36,19 @@ def run_tv_52wh_scrape():
   todayFileSubstring = fiftyTwoWkHighStub + '-' + currDate 
 
   # Log file for scrape times
-  print("TradingView 52WHs scrape " + currDT)
+  if cacheTvMovers is True:
+    print("TradingView 52WHs scrape CACHE: " + currDT)
+  else:
+    print("TradingView 52WHs scrape WEBREQ: " + currDT)
+
   with open("tv_scrape_test.txt", 'a') as tvScrapeTestFile:
-    tvScrapeTestFile.write("TradingView Scrape : " + currDT + "\n")
+    logFileText = "TradingView 52WHs Scrape "
+    if cacheTvMovers is True:
+      logFileText += "From Cache : "
+    else:
+      logFileText += "From WebReq : "
+    logFileText += currDT + "\n"
+    tvScrapeTestFile.write(logFileText)
 
   # First check if there is a cache version of this scrape on record
   dataDirFiles = [f for f in listdir(scrapeDataDir) if isfile(join(scrapeDataDir, f))]
@@ -69,13 +77,11 @@ def run_tv_52wh_scrape():
     response = requests.get(tvScrapeUrl)
     dataFileString = response.text
 
-    if cacheTvMovers is True:
-      saveFileName = scrapeDataDir + fiftyTwoWkHighStub + '-' + currDT + '.txt'
-
-      # Write data to file
-      saveFile = open(saveFileName, "w")
-      saveFile.write("%s" % dataFileString)
-      saveFile.close()
+    # Write data to file
+    saveFileName = scrapeDataDir + fiftyTwoWkHighStub + '-' + currDT + '.txt'
+    saveFile = open(saveFileName, "w")
+    saveFile.write("%s" % dataFileString)
+    saveFile.close()
 
   # Delete the old scrape files once we have achieved fresh data
   if cacheTvMovers is True and len(oldDataFileList) > 0:

@@ -55,12 +55,14 @@ def thread_method_tmx_scrape():
 	while getattr(currThread, "do_run", True):
 		dbData = ""
 		errData = ""
-		
+
+		cacheScrapeMode = running_cache_scrape_mode()
+
 		if scrapeExchange == "TSX":
-			dbData, errData = tmxScraper.run_tmx_tsx_scrape()
+			dbData, errData = tmxScraper.run_tmx_tsx_scrape(cacheScrapeMode)
 			scrapeExchange = "TSXV" # switch to TSXV exchange for next loop
 		elif scrapeExchange == "TSXV":
-			dbData, errData = tmxScraper.run_tmx_tsxv_scrape()
+			dbData, errData = tmxScraper.run_tmx_tsxv_scrape(cacheScrapeMode)
 			scrapeExchange = "TSX" # switch back to TSX exchange for next loop
 			
 		if len(dbData) > 0:
@@ -96,7 +98,9 @@ def thread_method_tradingview_scrape():
 		dbData = ""
 		errData = ""
 		
-		dbData, errData = tradingViewScraper.run_tv_52wh_scrape()
+		cacheScrapeMode = running_cache_scrape_mode()
+		
+		dbData, errData = tradingViewScraper.run_tv_52wh_scrape(cacheScrapeMode)
 			
 		if len(dbData) > 0:
 			returnData += dbData + "\n"
@@ -118,3 +122,28 @@ def thread_method_tradingview_scrape():
 			secsWaited += 1
 		
 	return returnData, errorData
+
+def running_cache_scrape_mode():
+	cacheMode = True
+
+	# Based on what time it is, we want to be running the trace or not on a loop
+	currDateTime = datetime.now()
+	currWeekday = currDateTime.today().weekday() # 0 for monday, 6 for sunday
+	currHourStr = currDateTime.strftime('%H')
+	currMinStr = currDateTime.strftime('%M')
+	currHour = int(currHourStr)
+	currMin = int(currMinStr)
+
+	# Find if we are during trading hours, if so, do not cache
+	if currWeekday >= 0 and currWeekday <= 4:
+		if currHour >= 9 and currHour <= 16:
+			if currHour == 9:
+				if currMin > 20:
+					cacheMode = False
+			elif currHour == 16:
+				if currMin < 30:
+					cacheMode = False
+			else:
+				cacheMode = False
+
+	return cacheMode
