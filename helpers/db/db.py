@@ -21,7 +21,7 @@ def get_db_connection():
 	
 	return conn, errorString
 	
-def update_ticker_data(stockDataDict, tradeHistory = "", priceUpdateDT = ""):
+def update_ticker_data(stockDataDict, tradeHistory = "", priceUpdateDTObj = None):
 	printString = ''
 	errorString = ''
 	conn = None
@@ -43,18 +43,22 @@ def update_ticker_data(stockDataDict, tradeHistory = "", priceUpdateDT = ""):
 			
 			# Data Sample:
 			# stockDataDict = {"ticker" : tickerSymbol, "exchange_name" : "", "company_name" : "", "last_price" : "", "change_amount" : "", "change_percent" : "", 
-			# 					"share_volume" : "", "fiftytwo_week_high" : "", "fiftytwo_week_low" : ""}
+			# 								"share_volume" : "", "fiftytwo_week_high" : "", "fiftytwo_week_low" : ""}
 			
 			# Get the existing row for this ticker if it exists
-			
-			sqlString = "SELECT ticker, last_price, price_updated, history_updated FROM stock_information WHERE ticker = E'" + stockDataDict["ticker"] + "';"
+			sqlString = "SELECT ticker, last_price, EXTRACT(epoch FROM price_updated AT TIME ZONE 'America/New_York'), history_updated "
+			sqlString += "FROM stock_information WHERE ticker = E'" + stockDataDict["ticker"] + "';"
 			cur.execute(sqlString)
 			fetchedTickerRow = cur.fetchone()
+
 			fieldsUpdated = 0
-			
-			# TODO: handle if a price update time is passed in and its earlier than the last price_updated, dont update price info
 
 			if fetchedTickerRow is None:
+				# We don't have a pre-existing row for this ticker, assume if a price time is passed that's the time we use for price data
+				priceUpdateDT = ""
+				if priceUpdateDTObj is not None:
+					priceUpdateDT = priceUpdateDTObj.strftime('%Y-%m-%d %H:%M:%S')
+
 				fieldsUpdated = 1
 				# Build the SQL insert statement
 				sqlString = "INSERT INTO stock_information (ticker"
@@ -98,8 +102,22 @@ def update_ticker_data(stockDataDict, tradeHistory = "", priceUpdateDT = ""):
 					sqlString += ", E'" + tradeHistory + "', CURRENT_TIMESTAMP"
 				sqlString += ", CURRENT_TIMESTAMP)"
 			else:
+				# We need to check that the price being updated data is not from an earlier quote time from when it was last updated
+				priceUpdatedEpoch = int(fetchedTickerRow[2])
+				lastUpdatedDTObj = datetime.fromtimestamp(priceUpdatedEpoch)
+
+				# If a specified update data datetime is given, make sure its more recent than existing price data
+				priceUpdateDT = ""
+				ignorePriceUpdate = False
+				if priceUpdateDTObj is not None:
+					print(stockDataDict["ticker"] + " LAST UPDATED IN TABLE: " + lastUpdatedDTObj.strftime('%Y-%m-%d %H:%M:%S'))
+					print(stockDataDict["ticker"] + " ATTEMPTING TO BE UPDATED WITH PRICE TIME: " + priceUpdateDTObj.strftime('%Y-%m-%d %H:%M:%S'))
+					if priceUpdateDTObj > lastUpdatedDTObj:
+						priceUpdateDT = priceUpdateDTObj.strftime('%Y-%m-%d %H:%M:%S')
+					else:
+						ignorePriceUpdate = True
+
 				# Build the SQL update statement
-				
 				sqlString = "UPDATE stock_information SET "
 				if "exchange_name" in stockDataDict.keys() and len(stockDataDict["exchange_name"]) > 0:
 					if fieldsUpdated > 0:
@@ -111,27 +129,27 @@ def update_ticker_data(stockDataDict, tradeHistory = "", priceUpdateDT = ""):
 						sqlString += ", "
 					sqlString += "company_name = E'" + stockDataDict["company_name"] + "'"
 					fieldsUpdated += 1
-				if "last_price" in stockDataDict.keys() and len(stockDataDict["last_price"]) > 0:
+				if "last_price" in stockDataDict.keys() and len(stockDataDict["last_price"]) > 0 and ignorePriceUpdate is False:
 					if fieldsUpdated > 0:
 						sqlString += ", "
 					sqlString += "last_price = '" + stockDataDict["last_price"] + "'"
 					fieldsUpdated += 1
-				if "change_amount" in stockDataDict.keys() and len(stockDataDict["change_amount"]) > 0:
+				if "change_amount" in stockDataDict.keys() and len(stockDataDict["change_amount"]) > 0 and ignorePriceUpdate is False:
 					if fieldsUpdated > 0:
 						sqlString += ", "
 					sqlString += "change_amount = '" + stockDataDict["change_amount"] + "'"
 					fieldsUpdated += 1
-				if "change_percent" in stockDataDict.keys() and len(stockDataDict["change_percent"]) > 0:
+				if "change_percent" in stockDataDict.keys() and len(stockDataDict["change_percent"]) > 0 and ignorePriceUpdate is False:
 					if fieldsUpdated > 0:
 						sqlString += ", "
 					sqlString += "change_percent = '" + stockDataDict["change_percent"] + "'"
 					fieldsUpdated += 1
-				if "share_volume" in stockDataDict.keys() and len(stockDataDict["share_volume"]) > 0:
+				if "share_volume" in stockDataDict.keys() and len(stockDataDict["share_volume"]) > 0 and ignorePriceUpdate is False:
 					if fieldsUpdated > 0:
 						sqlString += ", "
 					sqlString += "share_volume = '" + stockDataDict["share_volume"] + "'"
 					fieldsUpdated += 1
-				if "last_price" in stockDataDict.keys() and len(stockDataDict["last_price"]) > 0:
+				if "last_price" in stockDataDict.keys() and len(stockDataDict["last_price"]) > 0 and ignorePriceUpdate is False:
 					if fieldsUpdated > 0:
 						sqlString += ", "
 					if len(priceUpdateDT) > 0: # If a price update time has been provided (accounting for delay)

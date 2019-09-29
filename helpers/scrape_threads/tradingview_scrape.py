@@ -32,7 +32,6 @@ def run_tv_52wh_scrape(cacheTvMovers = False):
 
   # We need a datetime of 15 minutes ago to account for delay in price reading
   priceUpdateDTObj = datetime.now() - timedelta(minutes=15)
-  priceUpdateDT = priceUpdateDTObj.strftime('%Y-%m-%d %H:%M:%S') 
   todayFileSubstring = fiftyTwoWkHighStub + '-' + currDate 
 
   # Log file for scrape times
@@ -169,7 +168,7 @@ def run_tv_52wh_scrape(cacheTvMovers = False):
     errData = ""
 
     for stockDataToSave in validStockList:
-      dbData, errData = db.update_ticker_data(stockDataToSave, "", priceUpdateDT)
+      dbData, errData = db.update_ticker_data(stockDataToSave, "", priceUpdateDTObj)
     
     if len(dbData) > 0:
       returnData += dbData + "\n"
