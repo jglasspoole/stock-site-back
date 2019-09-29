@@ -110,8 +110,6 @@ def update_ticker_data(stockDataDict, tradeHistory = "", priceUpdateDTObj = None
 				priceUpdateDT = ""
 				ignorePriceUpdate = False
 				if priceUpdateDTObj is not None:
-					print(stockDataDict["ticker"] + " LAST UPDATED IN TABLE: " + lastUpdatedDTObj.strftime('%Y-%m-%d %H:%M:%S'))
-					print(stockDataDict["ticker"] + " ATTEMPTING TO BE UPDATED WITH PRICE TIME: " + priceUpdateDTObj.strftime('%Y-%m-%d %H:%M:%S'))
 					if priceUpdateDTObj > lastUpdatedDTObj:
 						priceUpdateDT = priceUpdateDTObj.strftime('%Y-%m-%d %H:%M:%S')
 					else:
